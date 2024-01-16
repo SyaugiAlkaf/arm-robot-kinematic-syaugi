@@ -1,0 +1,156 @@
+#include <Servo.h>
+
+Servo servoMotor1;
+Servo servoMotor2;
+Servo servoMotor3;
+
+// Define the servo position ranges
+int servo1_min = 0, servo1_max = 180;
+int servo2_min = 0, servo2_max = 150;
+int servo3_min = 40, servo3_max = 180;
+
+// Embedded dataset
+float dataset[][6] = {
+    {0, 0, 0, -5.27, -1.48, 0},
+    {20, 0, 0, -3.46, -3.18, 0},
+    {40, 0, 0, -1.90, -4.42, 0},
+    {60, 0, 0, -1.50, -4.15, 0},
+    {80, 0, 0, 0.25, -5.76, 0},
+    {120, 0, 0, 4.62, -4.43, 0},
+    {160, 0, 0, 6.12, -0.87, 0},
+    {180, 0, 0, 5.76, 0.54, 0},
+    {0, 40, 0, -6.00, -1.56, 4.33},
+    {40, 40, 0, -2.80, -5.25, 4.33},
+    {80, 40, 0, 0.58, -7.15, 4.33},
+    {120, 40, 0, 2.75, -5.15, 4.33},
+    {160, 40, 0, 6.12, -1.05, 4.33},
+    {0, 80, 0, -5.78, -0.98, 8.76},
+    {40, 80, 0, -3.44, -5.76, 8.76},
+    {80, 80, 0, 0.60, -7.05, 8.76},
+    {120, 80, 0, 4.11, -4.31, 8.76},
+    {160, 80, 0, 5.45, -1.02, 8.76},
+    {0, 120, 0, -2.10, -0.97, 12.03},
+    {40, 120, 0, -1.20, -1.68, 12.03},
+    {80, 120, 0, 0.12, -3.47, 12.03},
+    {120, 120, 0, 1.96, -2.17, 12.03},
+    {160, 120, 0, 2.18, -0.96, 12.03},
+    {0, 140, 0, -1.06, -1.29, 13.35},
+    {40, 140, 0, -0.86, -1.28, 13.35},
+    {80, 140, 0, -0.28, -0.97, 13.35},
+    {120, 140, 0, 0.17, 0.20, 13.35},
+    {160, 140, 0, 0.24, 0.08, 13.35},
+    {0, 0, 80, -10.67, -2.59, 6.24},
+    {80, 0, 80, -0.60, -11.34, 6.24},
+    {160, 0, 80, 11.34, -2.38, 6.24},
+    {0, 80, 80, 0.64, -1.03, 15.01},
+    {80, 80, 80, 0.53, -1.00, 15.01},
+    {160, 80, 80, 1.20, -1.04, 15.01},
+    {0, 160, 80, 12.13, 1.02, 9.29},
+    {80, 160, 80, 1.16, 11.64, 9.29},
+    {160, 160, 80, 10.76, 3.30, 9.29},
+    {0, 0, 160, -6.94, -1.52, 14.98},
+    {80, 0, 160, 0.92, -8.28, 14.98},
+    {160, 0, 160, 7.95, -1.94, 14.98},
+    {0, 80, 160, 7.94, 1.23, 14.98},
+    {80, 80, 160, 1.38, 10.07, 14.98},
+    {160, 80, 160, -7.59, 1.35, 14.98},
+    {0, 160, 160, 12.32, 1.28, -1.47},
+    {80, 160, 160, 1.15, 11.60, -1.47},
+    {160, 160, 160, -10.60, 3.51, -1.47}
+};
+
+// Function to find the closest XYZ match
+void findClosestMatch(float desired_x, float desired_y, float desired_z, float &closest_servo1, float &closest_servo2, float &closest_servo3) {
+    float min_distance = 999999.0; // Initialize with a large value
+    for (int i = 0; i < sizeof(dataset) / sizeof(dataset[0]); ++i) {
+        float distance = sqrt(pow(dataset[i][3] - desired_x, 2) + pow(dataset[i][4] - desired_y, 2) + pow(dataset[i][5] - desired_z, 2));
+        if (distance < min_distance) {
+            min_distance = distance;
+            closest_servo1 = dataset[i][0];
+            closest_servo2 = dataset[i][1];
+            closest_servo3 = dataset[i][2];
+        }
+    }
+}
+
+void moveRobot(float desired_x, float desired_y, float desired_z) {
+    float closest_servo1, closest_servo2, closest_servo3;
+    findClosestMatch(desired_x, desired_y, desired_z, closest_servo1, closest_servo2, closest_servo3);
+    
+    Serial.begin(9600);
+    Serial.print("Moving to (");
+    Serial.print(desired_x);
+    Serial.print(", ");
+    Serial.print(desired_y);
+    Serial.print(", ");
+    Serial.print(desired_z);
+    Serial.println(") coordinates...");
+    
+    Serial.print("Servo Values: ");
+    Serial.print(closest_servo1);
+    Serial.print(", ");
+    Serial.print(closest_servo2);
+    Serial.print(", ");
+    Serial.println(closest_servo3);
+
+    servoMotor1.write(closest_servo1);
+    servoMotor2.write(closest_servo2);
+    servoMotor3.write(closest_servo3);
+
+    Serial.println("Movement completed.");
+}
+
+void danceRobotRandom() {
+    int loopRange = 10; // Number of loops
+
+    for (int i = 0; i < loopRange; ++i) {
+        // Generate random servo values within the specified ranges
+        int servo1_value = random(servo1_min, servo1_max + 1); // Adding 1 to include servo1_max
+        int servo2_value = random(servo2_min, servo2_max + 1); // Adding 1 to include servo2_max
+        int servo3_value = random(servo3_min, servo3_max + 1); // Adding 1 to include servo3_max
+
+        // Apply random servo values to the servos
+        servoMotor1.write(servo1_value);
+        servoMotor2.write(servo2_value);
+        servoMotor3.write(servo3_value);
+
+        // Delay between each random movement
+        delay(1000); // Adjust delay as needed
+    }
+}
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(9600);
+
+  // Attach servo motors to pins
+  servoMotor1.attach(5);  // Attach servoMotor1 to pin 5
+  servoMotor2.attach(6);  // Attach servoMotor2 to pin 6
+  servoMotor3.attach(9);  // Attach servoMotor3 to pin 9
+}
+
+void loop() {
+    if (Serial.available() > 0) {
+        int choice = Serial.parseInt();
+        
+        if (choice == 1) {
+            Serial.println("Enter desired x, y, z coordinates:");
+            while (Serial.available() < 3) {} // Wait until all values are received
+            
+            float desired_x = Serial.parseFloat();
+            float desired_y = Serial.parseFloat();
+            float desired_z = Serial.parseFloat();
+            
+            moveRobot(desired_x, desired_y, desired_z);
+            
+            while (Serial.available() > 0) {
+                Serial.read(); // Clear any remaining data in the input buffer
+            }
+        } else if (choice == 2) {
+            Serial.println("Dancing...");
+            danceRobotRandom();
+        } else {
+            Serial.println("Invalid choice. Enter 1 to move to desired position or 2 for dancing.");
+        }
+    }
+}

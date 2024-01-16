@@ -1,0 +1,148 @@
+#include <Servo.h>
+#include <math.h>
+
+Servo servo1;
+Servo servo2;
+Servo servo3;
+
+// Calibration parameters
+float m1 = -0.9138, c1 = -23.68;
+float m2 = -0.9123, c2 = 145.3;
+float m3 = -0.9083, c3 = 260.8;
+
+// Polynomial regression coefficients and intercepts
+float slopes[3][3] = {
+    {0.0818254874, 0.000148495241, -2.98354403},
+    {-0.373541412, -0.148319711, -0.0949930206},
+    {0.0324485754, -0.0377753531, 1.86846493}
+};
+
+float intercepts[3] = {13.21373295, -2.54450404, -0.02656743};
+
+// DH parameters
+float a1 = 1.5, a2 = 2, a3 = 0;
+float d1 = 3.5, d2 = 1.5, d3 = 8;
+float alpha1 = PI/2.0, alpha2 = 0, alpha3 = 0; // Define PI if not defined
+
+float T[4][4]; // Declare the T matrix before setup()
+
+// Calibration function
+float calibrate_servo(float servo_input, float slope, float intercept) {
+    return slope * servo_input + intercept;
+}
+
+// Convert degrees to radians
+float toRadians(float degrees) {
+    return degrees * PI / 180.0;
+}
+
+
+void setup() {
+    Serial.begin(9600);
+    servo1.attach(5);  // Adjust the pins based on your setup
+    servo2.attach(6);
+    servo3.attach(9);
+
+    // Initialize servo inputs (change these values for testing)
+    float servo_input1 = 80;
+    float servo_input2 = 120;
+    float servo_input3 = 180;
+
+    servo1.write(servo_input1);
+    servo2.write(servo_input2);
+    servo3.write(servo_input3);
+
+    // Joint angles from servo input
+    float theta1_deg = calibrate_servo(servo_input1, m1, c1);
+    float theta2_deg = calibrate_servo(servo_input2, m2, c2);
+    float theta3_deg = calibrate_servo(servo_input3, m3, c3);
+
+    // Convert angles to radians
+    float theta1 = toRadians(theta1_deg);
+    float theta2 = toRadians(theta2_deg);
+    float theta3 = toRadians(theta3_deg);
+
+    // Forward kinematics matrices
+    float T1[4][4] = {
+        {cos(theta1), -sin(theta1)*cos(alpha1), sin(theta1)*sin(alpha1), a1*cos(theta1)},
+        {sin(theta1), cos(theta1)*cos(alpha1), -cos(theta1)*sin(alpha1), a1*sin(theta1)},
+        {0, sin(alpha1), cos(alpha1), d1},
+        {0, 0, 0, 1}
+    };
+
+    float T2[4][4] = {
+        {cos(theta2), -sin(theta2)*cos(alpha2), sin(theta2)*sin(alpha2), a2*cos(theta2)},
+        {sin(theta2), cos(theta2)*cos(alpha2), -cos(theta2)*sin(alpha2), a2*sin(theta2)},
+        {0, sin(alpha2), cos(alpha2), d2},
+        {0, 0, 0, 1}
+    };
+
+    float T3[4][4] = {
+        {cos(theta3), -sin(theta3)*cos(alpha3), sin(theta3)*sin(alpha3), a3*cos(theta3)},
+        {sin(theta3), cos(theta3)*cos(alpha3), -cos(theta3)*sin(alpha3), a3*sin(theta3)},
+        {0, sin(alpha3), cos(alpha3), d3},
+        {0, 0, 0, 1}
+    };
+
+    // Overall transformation matrix
+    float tempResult[4][4];
+    matrixMultiply(T1, T2, tempResult);
+    matrixMultiply(tempResult, T3, T);
+
+    // Extract end-effector pose
+    float end_effector_position[3] = { T[0][3], T[1][3], T[2][3] };
+    float end_effector_orientation_matrix[3][3] = {
+        { T[0][0], T[0][1], T[0][2] },
+        { T[1][0], T[1][1], T[1][2] },
+        { T[2][0], T[2][1], T[2][2] }
+    };
+
+    // Predict end-effector positions using linear regression
+    float predicted_end_effector_x = slopes[0][0] * theta1 + slopes[0][1] * theta2 + slopes[0][2] * theta3 + intercepts[0];
+    float predicted_end_effector_y = slopes[1][0] * theta1 + slopes[1][1] * theta2 + slopes[1][2] * theta3 + intercepts[1];
+    float predicted_end_effector_z = slopes[2][0] * theta1 + slopes[2][1] * theta2 + slopes[2][2] * theta3 + intercepts[2];
+    
+    // Display the predicted end-effector position
+    Serial.println("\nCalibrated End-Effector Position: ");
+    Serial.print(predicted_end_effector_x);
+    Serial.print(", ");
+    Serial.print(predicted_end_effector_y);
+    Serial.print(", ");
+    Serial.println(predicted_end_effector_z);
+
+    Serial.println("Predicted End-Effector Position:");
+    Serial.print(end_effector_position[0]);
+    Serial.print(", ");
+    Serial.print(end_effector_position[1]);
+    Serial.print(", ");
+    Serial.println(end_effector_position[2]);
+
+    Serial.println("End-Effector Orientation Matrix:");
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            Serial.print(end_effector_orientation_matrix[i][j]);
+            Serial.print(", ");
+        }
+        Serial.println();
+    }
+}
+
+void loop() {
+    // Nothing here for this example
+}
+
+void matrixMultiply(float A[4][4], float B[4][4], float result[4][4]) {
+    int i, j, k;
+    float sum = 0;
+
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+            sum = 0;
+            for (k = 0; k < 4; k++) {
+                sum += A[i][k] * B[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+}
+
