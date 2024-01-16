@@ -26,4 +26,4 @@ Here are some snapshots of the Arm Robot in action:
   <img src="1.png" alt="Robot Action 1" width="400"/>
 </p>
 
-Feel free to explore the [demo video](https://www.canva.com/design/DAF0f6DqohE/guJJtTS7xdrXKduJhdChsw/edit?utm_content=DAF0f6DqohE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) to see the Arm Robot Kinematic project in action!
+Feel free to explore the [presentation](https://www.canva.com/design/DAF0f6DqohE/guJJtTS7xdrXKduJhdChsw/edit?utm_content=DAF0f6DqohE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) to see the Arm Robot Kinematic project in action!
